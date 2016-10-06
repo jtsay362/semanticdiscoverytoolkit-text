@@ -1,0 +1,19 @@
+group 'org.sd'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'maven'
+
+sourceCompatibility = 1.8
+
+repositories {
+  mavenLocal()
+  mavenCentral()
+}
+
+dependencies {
+  compile group: 'org.sd', name: 'io', version: '1.0-SNAPSHOT'
+  compile group: 'org.sd', name: 'util', version: '1.0-SNAPSHOT'
+  compile group: 'org.sd', name: 'nlp', version: '1.0-SNAPSHOT'
+  testCompile group: 'junit', name: 'junit', version: '4.11'
+}
