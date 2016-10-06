@@ -23,12 +23,10 @@ import org.sd.util.tree.Tree;
 
 import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +49,6 @@ public class GeneralizedSuffixTree {
   private String[] strings;
   private RadixTreeImpl<SuffixData> suffixTree;
   private String eosMarker;
-  private int eosLen;
 
   private List<Set<Tree<RadixData<SuffixData>>>> _leavesByString;
 
@@ -78,7 +75,6 @@ public class GeneralizedSuffixTree {
   public GeneralizedSuffixTree(String[] strings, String eosMarker) {
     this.strings = strings;
     this.eosMarker = eosMarker;
-    this.eosLen = (eosMarker == null) ? 0 : eosMarker.length();
     this.suffixTree = new RadixTreeImpl<SuffixData>();
 
     for (int i = 0; i < strings.length; ++i) {

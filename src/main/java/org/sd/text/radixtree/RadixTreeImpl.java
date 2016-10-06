@@ -242,19 +242,19 @@ public class RadixTreeImpl<T> implements RadixTree<T> {
    * @return The list of values whose key start with the given prefix
    */
   public List<T> searchPrefix(String key, int recordLimit) {
-    List<T> keys = new ArrayList<T>();
+    List<T> values = new ArrayList<T>();
 
-    Tree<RadixData<T>> node = searchPefix(key, root);
+    Tree<RadixData<T>> node = searchPrefix(key, root);
 
     if (node != null) {
       final RadixData<T> nodeData = node.getData();
       if (nodeData.isReal()) {
-        keys.add(nodeData.getValue());
+        values.add(nodeData.getValue());
       }
-      getNodes(node, keys, recordLimit);
+      getNodes(node, values, recordLimit);
     }
 
-    return keys;
+    return values;
   }
 
   /**
@@ -371,7 +371,7 @@ public class RadixTreeImpl<T> implements RadixTree<T> {
     }
   }
 
-  private Tree<RadixData<T>> searchPefix(String key, Tree<RadixData<T>> node) {
+  private Tree<RadixData<T>> searchPrefix(String key, Tree<RadixData<T>> node) {
     Tree<RadixData<T>> result = null;
     int i = 0;
     final int keylen = key.length();
@@ -389,12 +389,12 @@ public class RadixTreeImpl<T> implements RadixTree<T> {
     if (i == keylen && i <= nodelen) {
       result = node;
     }
-    else if (nodeData.getKey().equals("") || (i < keylen && i >= nodelen)) {
+    else if ((i < keylen && i >= nodelen) || nodeData.getKey().equals("")) {
       if (node.hasChildren()) {
         String newText = key.substring(i, keylen);
         for (Tree<RadixData<T>> child : node.getChildren()) {
           if (child.getData().getKey().startsWith(newText.charAt(0) + "")) {
-            result = searchPefix(newText, child);
+            result = searchPrefix(newText, child);
             break;
           }
         }
@@ -412,7 +412,7 @@ public class RadixTreeImpl<T> implements RadixTree<T> {
     queue.addAll(parent.getChildren());
 
     while (!queue.isEmpty()) {
-      Tree<RadixData<T>> node = queue.remove();
+      final Tree<RadixData<T>> node = queue.remove();
       final RadixData<T> nodeData = node.getData();
       if (nodeData.isReal()) {
         keys.add(nodeData.getValue());
@@ -443,7 +443,7 @@ public class RadixTreeImpl<T> implements RadixTree<T> {
    * for the node whose key matches the given prefix
    * 
    * @param prefix
-   *            The key o prefix to search in the tree
+   *            The key or prefix to search in the tree
    * @param visitor
    *            The Visitor that will be called if a node with "key" as its
    *            key is found
@@ -470,7 +470,7 @@ public class RadixTreeImpl<T> implements RadixTree<T> {
       visitor.visit(prefix, node);
     }
     else if ("".equals(nodeKey) || // either we are at the root
-             (i < keylen && i >= nodelen)) { // OR we need to traverse the childern
+             (i < keylen && i >= nodelen)) { // OR we need to traverse the children
       if (node.hasChildren()) {
         String newText = prefix.substring(i, keylen);
         for (Tree<RadixData<T>> child : node.getChildren()) {

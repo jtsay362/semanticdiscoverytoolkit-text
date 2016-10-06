@@ -27,7 +27,7 @@ package org.sd.text.radixtree;
  *
  * @author Spence Koehler
  */
-public interface ValueMerger<T> {
+public interface ValueMerger<V> {
   
   /**
    * Merge the new value into the existing data or throw an
@@ -36,5 +36,5 @@ public interface ValueMerger<T> {
    * @param existingData  The radix data on the existing node.
    * @param newValue      The new conflicting value to be added.
    */
-  public void merge(RadixData<T> existingData, T newValue);
+  public void merge(RadixData<V> existingData, V newValue);
 }

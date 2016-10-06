@@ -34,7 +34,7 @@ package org.sd.text.radixtree;
  *
  * @author Spence Koehler
  */
-public interface ValueReplicator<T> {
+public interface ValueReplicator<V> {
   
   /**
    * Replicate the given value to place in the new "parent"
@@ -42,5 +42,5 @@ public interface ValueReplicator<T> {
    *
    * @param value      The value to be replicated.
    */
-  public T replicate(T value);
+  public V replicate(V value);
 }
