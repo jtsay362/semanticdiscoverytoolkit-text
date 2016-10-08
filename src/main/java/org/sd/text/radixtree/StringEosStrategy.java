@@ -1,6 +1,8 @@
 package org.sd.text.radixtree;
 
 public class StringEosStrategy implements EosStrategy<String> {
+  protected StringEosStrategy() {}
+
   @Override
   public String createEos(int index) {
     if (index < 0) {
