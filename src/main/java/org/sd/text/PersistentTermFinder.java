@@ -29,7 +29,7 @@ import java.util.Date;
  * Wrapper around a term finder to persist and re-use a persisted version
  * build from words in a file.
  * <p>
- * The persisted form will be named <file>.ptf for "persisted term finder."
+ * The persisted form will be named &lt;file&gt;.ptf for "persisted term finder."
  *
  * @author Spence Koehler
  */

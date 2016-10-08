@@ -206,9 +206,9 @@ public class MultiTermFinder {
    * <li>Lines beginning with '$' contain [caseSensitive] and [matchFlag] (space delimited)
    *     to begin definition of a term finder as referenced by logical expression(s)
    *     and are followed by lines with comma-delimited terms (ignoring blank lines and comments)
-   *     and/or lines beginning with '@' which reference a file with terms to load.</li>
+   *     and/or lines beginning with '@' which reference a file with terms to load.
    *     All terms are considered to be included in a term finder until another '$'
-   *     or EOF is encountered.
+   *     or EOF is encountered.</li>
    * </ul>
    * Note that logical expressions denote term finders by 0-based index in the order
    * they appear in the file. That is, the first '$' section defines term finder 0,

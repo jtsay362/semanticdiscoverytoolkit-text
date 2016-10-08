@@ -41,7 +41,7 @@ public class Keywords {
   /**
    * Get a keywords instance using the given resource.
    * <p>
-   * The resource must have lines of the form <count>|<keyword>. Blank lines
+   * The resource must have lines of the form &lt;count&gt;|&lt;keyword&gt;. Blank lines
    * and comment lines (beginning with a '#' sign) are ignored. The counts
    * must be integers sorted from HIGHEST to LOWEST. Currently, keywords are
    * assumed to be lowercase sequences of letters only.

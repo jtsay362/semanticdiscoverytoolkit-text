@@ -193,7 +193,7 @@ public class StringScorer implements Comparable<StringScorer> {
   /**
    * Determine whether the first string is a plausible match for the second.
    * <p>
-   * The current algorithm is: editDistance < floor(min(len1, len2)/2);
+   * The current algorithm is: editDistance &lt; floor(min(len1, len2)/2);
    * the number of characters in the shorter string, we have a plausible match.
    */
   public boolean isPlausible() {
