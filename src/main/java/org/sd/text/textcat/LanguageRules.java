@@ -24,6 +24,7 @@ import org.sd.io.FileUtil;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.Reader;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -38,26 +39,27 @@ public class LanguageRules {
   private Set<String> include;
   private Set<String> exclude;
 
-  public LanguageRules(File ruleFile) throws IOException {
+  public LanguageRules(Reader rawReader) throws IOException {
     this.include = new HashSet<String>();
     this.exclude = new HashSet<String>();
 
-    final BufferedReader reader = FileUtil.getReader(ruleFile);
+    final BufferedReader r = (rawReader instanceof BufferedReader) ?
+     ((BufferedReader) rawReader) : new BufferedReader(rawReader);
 
-    String line = null;
-    while ((line = reader.readLine()) != null) {
-      if (line.length() > 0) {
-        final char firstChar = line.charAt(0);
-        if (firstChar == '+') {
-          include.add(line.substring(1));
-        }
-        else if (firstChar == '-') {
-          exclude.add(line.substring(1));
+    try (BufferedReader reader = r) {
+      String line = null;
+      while ((line = reader.readLine()) != null) {
+        if (line.length() > 0) {
+          final char firstChar = line.charAt(0);
+          if (firstChar == '+') {
+            include.add(line.substring(1));
+          }
+          else if (firstChar == '-') {
+            exclude.add(line.substring(1));
+          }
         }
       }
     }
-
-    reader.close();
   }
 
   public boolean include(String languageModule) {

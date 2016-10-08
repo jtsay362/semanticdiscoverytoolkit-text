@@ -36,15 +36,16 @@ import java.util.List;
  * @author Spence Koehler
  */
 public class TestTextCat extends TestCase {
-
-  private static final String LANGUAGE_TEST_FILE_DIR1 = "resources/language_texts1";
-  private static final String LANGUAGE_TEST_FILE_DIR2 = "resources/language_texts2";
+  private static final String LANGUAGE_TEST_FILE_ROOT = "testdata";
+  private static final String LANGUAGE_TEST_FILE_DIR1 = "language_texts1";
+  private static final String LANGUAGE_TEST_FILE_DIR2 = "language_texts2";
 
   public TestTextCat(String name) {
     super(name);
   }
   
-  private final void doTestTexts(TextCat textCat, File dir, boolean doAll, boolean verbose) throws IOException {
+  private final void doTestTexts(TextCat textCat, String path, boolean doAll, boolean verbose) throws IOException {
+    File dir = new File(LANGUAGE_TEST_FILE_ROOT + "/" + path);
 
     final File[] languageTestFiles = dir.listFiles(new FileFilter() {
         public final boolean accept(File pathname) {
@@ -61,7 +62,9 @@ public class TestTextCat extends TestCase {
     }
 
     for (File languageTestFile : languageTestFiles) {
-      final String language = textCat.getLanguage(languageTestFile);  // expectation
+      System.out.println("LTF = " + languageTestFile);
+
+      final String language = textCat.getLanguage(languageTestFile.getPath());  // expectation
       if (textCat.hasLanguage(language) || doAll) {
         final String text = FileUtil.readAsString(languageTestFile.getAbsolutePath());
         final List<TextCat.ClassificationResult> languages = textCat.classify(text);
@@ -93,14 +96,14 @@ public class TestTextCat extends TestCase {
 
   public void testTexts() throws IOException {
     final TextCat textCat = new TextCat();  // load all languages
-    doTestTexts(textCat, FileUtil.getTestResourceFile(this.getClass(), LANGUAGE_TEST_FILE_DIR1), false, true);
-    doTestTexts(textCat, FileUtil.getTestResourceFile(this.getClass(), LANGUAGE_TEST_FILE_DIR2), false, true);
+    doTestTexts(textCat, LANGUAGE_TEST_FILE_DIR1, false, true);
+    doTestTexts(textCat, LANGUAGE_TEST_FILE_DIR2, false, true);
   }
 
   public void testConstrainedTexts() throws IOException {
     final TextCat textCat = new TextCat(new String[]{"dutch", "english", "german"});
-    doTestTexts(textCat, FileUtil.getTestResourceFile(this.getClass(), LANGUAGE_TEST_FILE_DIR1), true, false);
-    doTestTexts(textCat, FileUtil.getTestResourceFile(this.getClass(), LANGUAGE_TEST_FILE_DIR2), true, false);
+    doTestTexts(textCat, LANGUAGE_TEST_FILE_DIR1, true, false);
+    doTestTexts(textCat, LANGUAGE_TEST_FILE_DIR2, true, false);
   }
 
   public static Test suite() {

@@ -19,9 +19,6 @@
 package org.sd.text;
 
 
-import org.sd.io.FileUtil;
-import org.sd.util.StringUtil;
-
 import java.io.BufferedReader;
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -33,13 +30,19 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.sd.io.FileUtil;
+import org.sd.util.StringUtil;
+
 /**
  * Implementation of a trie for string matching.
  * <p>
  * @author Spence Koehler
  */
 public class BruteForceTrie implements Trie {
-
+  private static Logger logger = LoggerFactory.getLogger(BruteForceTrie.class);
   private Node root;
   private int maxDepth;
   private long numEncodedChars;
@@ -53,7 +56,7 @@ public class BruteForceTrie implements Trie {
     final BruteForceTrie result = new BruteForceTrie();
     DataInputStream dataIn = null;
     try {
-      System.out.println("loading trie from '" + new java.io.File(filename).getAbsolutePath() + "'...");
+      logger.info("loading trie from '" + new java.io.File(filename).getAbsolutePath() + "'...");
       dataIn = new DataInputStream(new FileInputStream(filename));
       result.read(dataIn);
     }
@@ -271,7 +274,7 @@ public class BruteForceTrie implements Trie {
 
     for (int i = 1; i < args.length; ++i) {
       final String inputWordsFile = args[i];
-      System.out.println("loading '" + inputWordsFile + "'...");
+      logger.info("loading '" + inputWordsFile + "'...");
 
       final BufferedReader reader = FileUtil.getReader(inputWordsFile);
       String line = null;
@@ -280,14 +283,14 @@ public class BruteForceTrie implements Trie {
       }
       reader.close();
 
-      System.out.println("\t" + trie);
+      logger.info("\t" + trie);
     }
 
-    System.out.println("Writing trie to '" + outputDatFile + "'");
+    logger.info("Writing trie to '" + outputDatFile + "'");
     final DataOutputStream dataOut = new DataOutputStream(new FileOutputStream(outputDatFile));
     trie.dump(dataOut);
     dataOut.close();
 
-    System.out.println("\t" + trie);
+    logger.info("\t" + trie);
   }
 }

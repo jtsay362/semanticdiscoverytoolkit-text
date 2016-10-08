@@ -18,13 +18,7 @@
 */
 package org.sd.text.textcat;
 
-
-import org.sd.io.FileUtil;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileFilter;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,6 +28,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.sd.io.FileUtil;
 
 /**
  * Port of TextCat implementation from perl to java.
@@ -47,9 +46,11 @@ import java.util.TreeMap;
  * @author Spence Koehler
  */
 public class TextCat {
-
-  private static final String LANGUAGE_MODULE_RESOURCE_DIR = "resources";
-  private static final String LANGUAGE_RULES_FILE = "resources/rules.txt";
+  private static final Logger logger = LoggerFactory.getLogger(TextCat.class);
+  // Must be a separate directory than one that holds class files, or else
+  // listing resources only results in class files.
+  private static final String LANGUAGE_RULES_PATH = "resources";
+  private static final String LANGUAGE_RULES_FILE = "rules.txt";
 
   private int opt_a;    // limit on number of languages to return (default 10)
   private double opt_u; // how much worse a result must be to not be mentioned as an alternative (usually 1.05 or 1.1)
@@ -79,11 +80,13 @@ public class TextCat {
     LanguageRules rules = null;
 
     if (languages == null) {
-      rules = new LanguageRules(FileUtil.getResourceFile(this.getClass(), LANGUAGE_RULES_FILE));
+      rules = new LanguageRules(
+        FileUtil.getReader(getClass(), LANGUAGE_RULES_PATH + "/" + LANGUAGE_RULES_FILE));
+      logger.info("Read default language rules");
     }
 
     this.language2ngrams = new TreeMap<String, Map<String, NGram>>();
-    loadLanguageModules(language2ngrams, FileUtil.getResourceFile(this.getClass(), LANGUAGE_MODULE_RESOURCE_DIR), languages, rules);
+    loadLanguageModules(language2ngrams, languages, rules);
     this.lnEntries = language2ngrams.entrySet();
     this.languages = buildLanguages(language2ngrams);
   }
@@ -199,62 +202,87 @@ public class TextCat {
    * <p>
    * Note that modules can be safely disabled by removing read permissions.
    */
-  private final void loadLanguageModules(Map<String, Map<String, NGram>> language2ngrams, File dir, String[] languages, final LanguageRules rules) throws IOException {
+  private final void loadLanguageModules(Map<String, Map<String, NGram>> language2ngrams, String[] languages, final LanguageRules rules) throws IOException {
 
     final Set<String> languageFiles = (languages == null) ? null : new HashSet<String>();
     if (languages != null) for (String language : languages) languageFiles.add(language.toLowerCase() + ".lm");
 
-    final File[] modules = dir.listFiles(new FileFilter() {
-        public final boolean accept(File pathname) {
-          boolean result = false;
+    for (String filename : getResourceFiles()) {
+      logger.debug("Got language resource " + filename);
+      String name = filename.toLowerCase();
+      if (name.endsWith(".lm") &&
+          ((languageFiles != null) ? languageFiles.contains(name) : rules != null ? (rules.include(name) && !rules.exclude(name)) : true)) {
 
-          final String name = pathname.getName().toLowerCase();
-          if (name.endsWith(".lm")) {
-            result = (languageFiles != null) ? languageFiles.contains(name) : rules != null ? (rules.include(name) && !rules.exclude(name)) : true;
-          }
-
-          return result;
-        }
-      });
-
-    for (File module : modules) {
-      if (module.canRead()) {
-        loadLanguageModule(language2ngrams, module);
+        loadLanguageModule(language2ngrams, LANGUAGE_RULES_PATH + "/" + filename);
       }
     }
   }
 
-  private final void loadLanguageModule(Map<String, Map<String, NGram>> language2ngrams, File module) throws IOException {
-    final String language = getLanguage(module);
+   private List<String> getResourceFiles() throws IOException {
+    List<String> filenames = new ArrayList<>();
+
+    try(
+     InputStream in = getResourceAsStream();
+     BufferedReader br = new BufferedReader( new InputStreamReader( in ) ) ) {
+      String resource;
+
+      while( (resource = br.readLine()) != null ) {
+        filenames.add( resource );
+      }
+    }
+
+    return filenames;
+  }
+
+  // From http://stackoverflow.com/questions/3923129/get-a-list-of-resources-from-classpath-directory
+  private InputStream getResourceAsStream() {
+    final String resource = getClass().getPackage().getName().replace('.', '/') + '/' +
+       LANGUAGE_RULES_PATH + "/";
+
+    logger.debug("Listing resources in " + resource);
+    //final InputStream in = getClass().getClassLoader().getResourceAsStream("/" + resource);
+    final InputStream in = Thread.currentThread().getContextClassLoader().
+       getResourceAsStream(resource);
+
+    logger.debug("in = " + in);
+
+    return in == null ? getClass().getResourceAsStream(resource) : in;
+  }
+
+  private final void loadLanguageModule(Map<String, Map<String, NGram>> language2ngrams, String modulePath) throws IOException {
+    final String language = getLanguage(modulePath);
     final Map<String, NGram> ngrams = new HashMap<String, NGram>();
     language2ngrams.put(language, ngrams);
 
     // use lines starting with an appropriate character. others are ignored.
-    final BufferedReader reader = FileUtil.getReader(module);
 
-    int rank = 1;
-    String line = null;
-    while ((line = reader.readLine()) != null) {
-      if (line.length() > 0) {
-        final char firstChar = line.charAt(0);
+    try (final BufferedReader reader = FileUtil.getReader(getClass(), modulePath)) {
+      int rank = 1;
+      String line = null;
+      while ((line = reader.readLine()) != null) {
+        if (line.length() > 0) {
+          final char firstChar = line.charAt(0);
 
-        // accept if doesn't start with non_word_characters, which are "0-9\s"
-        if (!((firstChar >= '0' && firstChar <= '9') || Character.isWhitespace(firstChar))) {
-          final String[] pieces = line.split("\\s+");
-          ngrams.put(pieces[0], new NGram(pieces[0], rank++));
+          // accept if doesn't start with non_word_characters, which are "0-9\s"
+          if (!((firstChar >= '0' && firstChar <= '9') || Character.isWhitespace(firstChar))) {
+            final String[] pieces = line.split("\\s+");
+            ngrams.put(pieces[0], new NGram(pieces[0], rank++));
+          }
         }
       }
     }
-
-    reader.close();
   }
 
-  protected final String getLanguage(File module) {
-    final String filename = module.getName();
+  protected final String getLanguage(String modulePath) {
+    final int lastSlashIndex = modulePath.lastIndexOf('/');
+    final String simpleName = (lastSlashIndex < 0) ? modulePath :
+      modulePath.substring(lastSlashIndex + 1);
+
+    logger.info("getLanguage: modulePath = " + modulePath + ", simpleName = " + simpleName);
 
     // strip of suffix (.lm)
-    final int dotPos = filename.lastIndexOf('.');
-    return filename.substring(0, dotPos);
+    final int dotPos = simpleName.lastIndexOf('.');
+    return simpleName.substring(0, dotPos);
   }
 
   private final List<NGram> createLanguageModule(String text) {
