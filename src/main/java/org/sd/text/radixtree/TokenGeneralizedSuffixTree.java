@@ -71,7 +71,7 @@ public class TokenGeneralizedSuffixTree<T> {
           suffix = new LinkedList<T>(tokenList);
           suffix.add(eosStrategy.createEos(i));
         } else {
-          suffix = makeTokenSubsequence(tokenList, j, len);
+          suffix = new LinkedList<T>(tokenList.subList(j, len));
           suffix.add(eosStrategy.createEos(-1));
         }
 
@@ -100,29 +100,17 @@ public class TokenGeneralizedSuffixTree<T> {
   private final List<T> clip(List<T> tokens, int startPos) {
     final int len = tokens.size();
     if (len == 0) {
-      return makeTokenSubsequence(tokens, startPos, len);
+      return tokens.subList(startPos, len);
     }
 
     final int lastIndex = len - 1;
     final T lastToken = tokens.get(lastIndex);
 
     if (eosStrategy.isEos(lastToken)) {
-      return makeTokenSubsequence(tokens, startPos, lastIndex);
+      return tokens.subList(startPos, lastIndex);
     }
 
-    return makeTokenSubsequence(tokens, startPos, len);
-  }
-
-  // TODO: return a view
-  private final List<T> makeTokenSubsequence(List<T> tokens, int startIndex, int endIndex) {
-    final LinkedList<T> rv = new LinkedList<T>();
-    final Iterator<T> it = tokens.listIterator(startIndex);
-
-    for (int i = startIndex; i < endIndex; i++) {
-      rv.add(it.next());
-    }
-
-    return rv;
+    return tokens.subList(startPos, len);
   }
 
   public final class SuffixData {
@@ -148,14 +136,14 @@ public class TokenGeneralizedSuffixTree<T> {
     }
 
     public List<T> getSubsequenceAtDepth(int depth) {
-      return makeTokenSubsequence(tokenLists.get(tokensIndex), sequenceStartIndex,
+      return tokenLists.get(tokensIndex).subList(sequenceStartIndex,
         sequenceStartIndex + depth);
     }
 
     public List<T> getSuffix() {
       final List<T> tokens = tokenLists.get(tokensIndex);
       return sequenceStartIndex == 0 ? tokens :
-        makeTokenSubsequence(tokens, sequenceStartIndex, tokens.size());
+        tokens.subList(sequenceStartIndex, tokens.size());
     }
 
     public void incorporate(SuffixData other) {
