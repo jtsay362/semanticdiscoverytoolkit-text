@@ -193,7 +193,9 @@ public class TokenGeneralizedSuffixTree<T> {
 
       // create all paths
       for (Tree<TokenRadixData<T, SuffixData>> leaf : leaves) {
-        paths.add(new Path(leaf, node2pathElt));
+        Path path = new Path();
+        path.updateNode2PathElt(leaf, node2pathElt);
+        paths.add(path);
       }
 
       // finalize all paths
@@ -342,14 +344,16 @@ public class TokenGeneralizedSuffixTree<T> {
 
   private final class Path {
 
-    public final LinkedList<PathElement> pathElements; //from root to leaf
+    public final LinkedList<PathElement> pathElements =
+       new LinkedList<PathElement>(); //from root to leaf
 
     /**
      * Construct this path.
      */
-    Path(Tree<TokenRadixData<T, SuffixData>> leaf, Map<Tree<TokenRadixData<T, SuffixData>>, PathElement> node2pathElt) {
-      this.pathElements = new LinkedList<PathElement>();
+    Path() {}
 
+    void updateNode2PathElt(final Tree<TokenRadixData<T, SuffixData>> leaf,
+      final Map<Tree<TokenRadixData<T, SuffixData>>, PathElement> node2pathElt) {
       // create the path from leaf to root
       PathElement childElt = null; // the path element of the child of the current node.
       for (Tree<TokenRadixData<T, SuffixData>> node = leaf; node != null; node = node.getParent()) {
