@@ -245,7 +245,7 @@ public class TokenGeneralizedSuffixTree<T> {
         }
 
         if (pathElement.getNumParticipating() < minParticipants) {
-          if (logger.isDebugEnabled()) {
+          if (isDebugEnabled) {
             logger.debug("Skipping path with num participating = " +
              pathElement.getNumParticipating() + " < " + minParticipants);
           }
@@ -255,7 +255,7 @@ public class TokenGeneralizedSuffixTree<T> {
         final List<T> tokens = pathElement.getKey();
         final int keyLength = tokens.size();
         if (keyLength < minLength) {
-          if (logger.isDebugEnabled()) {
+          if (isDebugEnabled) {
             logger.debug("Skipping key " + tokens + " with length " + keyLength +" < " + minLength);
           }
           continue;
@@ -294,7 +294,7 @@ public class TokenGeneralizedSuffixTree<T> {
           final BitSet participants = entry.getValue().participants;
 
           final int nextKeyLength = keyLength + 1;
-          if (logger.isDebugEnabled()) {
+          if (isDebugEnabled) {
             logger.debug("Checking for sequences containing " + tokens +
              " with participants " + participants + " and length " + nextKeyLength);
           }
@@ -316,22 +316,22 @@ public class TokenGeneralizedSuffixTree<T> {
               final List<T> largerSubsequence = largerEntry.getKey();
               final PathElement largerPathElement = largerEntry.getValue();
               if (participants.equals(largerPathElement.participants)) {
-                if (logger.isDebugEnabled()) {
+                if (isDebugEnabled) {
                   logger.debug("participants of "  + tokens + " are the same as " + largerSubsequence);
                 }
                 if (isProperSubsequence(largerSubsequence, tokens)) {
-                  if (logger.isDebugEnabled()) {
+                  if (isDebugEnabled) {
                     logger.debug(tokens + " is a subsequence of " + largerSubsequence + ", removing");
                   }
                   it.remove();
                   break LargerSubsequencesLoop;
                 } else {
-                  if (logger.isDebugEnabled()) {
+                  if (isDebugEnabled) {
                     logger.debug(tokens + " is not a subsequence of " + largerSubsequence);
                   }
                 }
               } else {
-                if (logger.isDebugEnabled()) {
+                if (isDebugEnabled) {
                   logger.debug("participants of "  + tokens + " are not the same as " + largerSubsequence);
                 }
               }
