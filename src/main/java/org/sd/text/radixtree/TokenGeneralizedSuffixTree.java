@@ -20,6 +20,8 @@ package org.sd.text.radixtree;
 
 
 import org.sd.util.tree.Tree;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -35,7 +37,8 @@ import java.util.*;
  *
  */
 public class TokenGeneralizedSuffixTree<T> {
-
+  private static final Logger logger = LoggerFactory.getLogger(TokenGeneralizedSuffixTree.class);
+  private static final boolean isDebugEnabled = logger.isDebugEnabled();
   private ArrayList<List<T>> tokenLists;
   private TokenRadixTreeImpl<T, SuffixData> suffixTree;
   private EosStrategy<T> eosStrategy;
@@ -92,6 +95,11 @@ public class TokenGeneralizedSuffixTree<T> {
     final Set<List<T>> result = pathContainer.collectLongest(minSize);
 
     return result;
+  }
+
+  public Map<List<T>, BitSet> commonSubsequences(int minLength, int minParticipants) {
+    final PathContainer pathContainer = new PathContainer(suffixTree);
+    return pathContainer.findCommonSequences(minLength, minParticipants);
   }
 
   /**
@@ -225,6 +233,138 @@ public class TokenGeneralizedSuffixTree<T> {
       }
 
       return result;
+    }
+
+    public Map<List<T>, BitSet> findCommonSequences(int minLength, int minParticipants) {
+      final Map<Integer, Map<List<T>, PathElement>> seqLengthToCommonSequences =
+        new HashMap<>();
+
+      for (PathElement pathElement : node2pathElt.values()) {
+        if (isDebugEnabled) {
+          logger.debug("Found path element " + pathElement);
+        }
+
+        if (pathElement.getNumParticipating() < minParticipants) {
+          if (logger.isDebugEnabled()) {
+            logger.debug("Skipping path with num participating = " +
+             pathElement.getNumParticipating() + " < " + minParticipants);
+          }
+          continue;
+        }
+
+        final List<T> tokens = pathElement.getKey();
+        final int keyLength = tokens.size();
+        if (keyLength < minLength) {
+          if (logger.isDebugEnabled()) {
+            logger.debug("Skipping key " + tokens + " with length " + keyLength +" < " + minLength);
+          }
+          continue;
+        }
+
+        Map<List<T>, PathElement> commonSequences = seqLengthToCommonSequences.get(keyLength);
+
+        if (commonSequences == null) {
+          commonSequences = new HashMap<List<T>, PathElement>();
+          seqLengthToCommonSequences.put(keyLength, commonSequences);
+        }
+        commonSequences.put(tokens, pathElement);
+      }
+
+      // Remove proper prefixes
+      ArrayList<Integer> allKeyLengths = new ArrayList(seqLengthToCommonSequences.keySet());
+      int[] keyLengthArray = new int[allKeyLengths.size()];
+      {
+        int i = 0;
+        for (Integer keyLength : allKeyLengths) {
+          keyLengthArray[i] = keyLength;
+          i += 1;
+        }
+      }
+
+      Arrays.sort(keyLengthArray);
+
+      for (int i = 0; i < keyLengthArray.length - 1; i++) {
+        final int keyLength = keyLengthArray[i];
+
+        Iterator<Map.Entry<List<T>, PathElement>> it = seqLengthToCommonSequences.get(keyLength).entrySet().iterator();
+
+        while (it.hasNext()) {
+          final Map.Entry<List<T>, PathElement> entry = it.next();
+          final List<T> tokens = entry.getKey();
+          final BitSet participants = entry.getValue().participants;
+
+          final int nextKeyLength = keyLength + 1;
+          if (logger.isDebugEnabled()) {
+            logger.debug("Checking for sequences containing " + tokens +
+             " with participants " + participants + " and length " + nextKeyLength);
+          }
+
+          final Map<List<T>, PathElement> largerSubsequences =
+            seqLengthToCommonSequences.get(nextKeyLength);
+
+          if (largerSubsequences == null) {
+            if (isDebugEnabled) {
+              logger.debug("No subsequences with length " + nextKeyLength + ", keeping " + tokens);
+            }
+          } else {
+            if (isDebugEnabled) {
+              logger.debug("Found " + largerSubsequences.size() + " subsequences with length " + nextKeyLength);
+            }
+
+            LargerSubsequencesLoop:
+            for (Map.Entry<List<T>, PathElement> largerEntry : largerSubsequences.entrySet()) {
+              final List<T> largerSubsequence = largerEntry.getKey();
+              final PathElement largerPathElement = largerEntry.getValue();
+              if (participants.equals(largerPathElement.participants)) {
+                if (logger.isDebugEnabled()) {
+                  logger.debug("participants of "  + tokens + " are the same as " + largerSubsequence);
+                }
+                if (isProperSubsequence(largerSubsequence, tokens)) {
+                  if (logger.isDebugEnabled()) {
+                    logger.debug(tokens + " is a subsequence of " + largerSubsequence + ", removing");
+                  }
+                  it.remove();
+                  break LargerSubsequencesLoop;
+                } else {
+                  if (logger.isDebugEnabled()) {
+                    logger.debug(tokens + " is not a subsequence of " + largerSubsequence);
+                  }
+                }
+              } else {
+                if (logger.isDebugEnabled()) {
+                  logger.debug("participants of "  + tokens + " are not the same as " + largerSubsequence);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      final Map<List<T>, BitSet> rv = new HashMap<>();
+
+      for (Map<List<T>, PathElement> seqToPathElement : seqLengthToCommonSequences.values()) {
+        for (Map.Entry<List<T>, PathElement> entry : seqToPathElement.entrySet()) {
+          rv.put(entry.getKey(), entry.getValue().getParticipants());
+        }
+      }
+
+      return rv;
+    }
+
+    private boolean isProperSubsequence(List<T> full, List<T> maybeSub) {
+      final int fullSize = full.size();
+      final int subSize = maybeSub.size();
+      if (full.size() <= maybeSub.size()) {
+        return false;
+      }
+
+      for (int i = 0; i <= fullSize - subSize; i++) {
+        if (maybeSub.equals(full.subList(i, i + subSize))) {
+          return true;
+        }
+      }
+
+      return false;
     }
 
     private final Map<Integer, ContributionLevels> createContributionLevels(Map<BitSet, PathElementSet> participants2pathElts) {
