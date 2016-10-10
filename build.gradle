@@ -13,10 +13,11 @@ repositories {
 
 dependencies {
   compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.21'
-  compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.1.7'
   compile group: 'org.sd', name: 'io', version: '1.0-SNAPSHOT'
   compile group: 'org.sd', name: 'util', version: '1.0-SNAPSHOT'
   compile group: 'org.sd', name: 'nlp', version: '1.0-SNAPSHOT'
+
+  testCompile group: 'ch.qos.logback', name: 'logback-classic', version: '1.1.7'
   testCompile group: 'junit', name: 'junit', version: '4.11'
   testCompile group: 'org.sd', name: 'cio', version: '1.0-SNAPSHOT'
 }
