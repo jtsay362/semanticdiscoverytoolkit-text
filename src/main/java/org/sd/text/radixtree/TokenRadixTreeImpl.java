@@ -315,8 +315,7 @@ public class TokenRadixTreeImpl<T, V> implements TokenRadixTree<T, V> {
         final T headToken = newTokens.get(0);
         for (Tree<TokenRadixData<T, V>> child : node.getChildren()) {
           final List<T> childTokens = child.getData().getTokens();
-          if (!childTokens.isEmpty() &&
-              childTokens.get(0).equals(headToken)) {
+          if (!childTokens.isEmpty() && childTokens.get(0).equals(headToken)) {
             flag = true;
             insert(newTokens, child, value, valueMerger, valueReplicator);
             break;

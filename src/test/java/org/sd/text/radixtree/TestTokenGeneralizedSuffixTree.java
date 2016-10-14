@@ -13,7 +13,12 @@ public class TestTokenGeneralizedSuffixTree extends TestCase {
     super(name);
   }
 
-  private final void doLongestSubstrsTest(String[] strings, int minLen, String[] expectedResults) {
+  private final void doLongestSubstrsTest(String[] strings, int minLen,
+    String[] expectedResults, TokenStrategy<String> tokenStrategy) {
+    if (tokenStrategy == null) {
+      tokenStrategy = StringTokenStrategy.INSTANCE;
+    }
+
     List<List<String>> tokensList = new ArrayList<List<String>>(strings.length);
 
     for (String s : strings) {
@@ -21,7 +26,7 @@ public class TestTokenGeneralizedSuffixTree extends TestCase {
     }
 
     final TokenGeneralizedSuffixTree<String> gst = new TokenGeneralizedSuffixTree<String>(
-     tokensList, StringEosStrategy.INSTANCE);
+     tokensList, tokenStrategy);
     final Set<List<String>> result = gst.longestSubsequence(minLen);
 
     assertEquals("got=" + result, expectedResults.length, result.size());
@@ -32,7 +37,13 @@ public class TestTokenGeneralizedSuffixTree extends TestCase {
   }
 
   private final void doCommonSubstrsTest(String[] strings, int minLen,
-    int minParticipants, Map<String, BitSet> expectedResults) {
+    int minParticipants, Map<String, BitSet> expectedResults,
+    TokenStrategy<String> tokenStrategy ) {
+
+    if (tokenStrategy == null) {
+      tokenStrategy = StringTokenStrategy.INSTANCE;
+    }
+
     List<List<String>> tokensList = new ArrayList<List<String>>(strings.length);
 
     for (String s : strings) {
@@ -40,7 +51,7 @@ public class TestTokenGeneralizedSuffixTree extends TestCase {
     }
 
     final TokenGeneralizedSuffixTree<String> gst = new TokenGeneralizedSuffixTree<String>(
-     tokensList, StringEosStrategy.INSTANCE);
+     tokensList, tokenStrategy);
 
     final Map<List<String>, BitSet> result = gst.commonSubsequences(minLen,
       minParticipants);
@@ -65,7 +76,7 @@ public class TestTokenGeneralizedSuffixTree extends TestCase {
       "Other junk This thing won all the awards Just kidding",
     }, 6, new String[] {
       "This thing won all the awards"
-    });
+    }, null);
   }
 
   public void testCommonSubsequences() {
@@ -82,12 +93,23 @@ public class TestTokenGeneralizedSuffixTree extends TestCase {
       "jk stands for just kidding actually"
     };
 
-    doCommonSubstrsTest(input, 6, 2, expected);
+    doCommonSubstrsTest(input, 6, 2, expected, null);
 
     BitSet updated = (BitSet) bitSet.clone();
     updated.set(2);
     expected.put("just kidding", updated);
-    doCommonSubstrsTest(input, 2, 2, expected);
+    doCommonSubstrsTest(input, 2, 2, expected, null);
+
+    expected.remove("just kidding");
+    doCommonSubstrsTest(input, 2, 2, expected, new StringTokenStrategy() {
+      @Override
+      public List<String> longestValidSubsequence(List<String> sequence) {
+        if (sequence.isEmpty() || Character.isLowerCase(sequence.get(0).charAt(0))) {
+          return Collections.EMPTY_LIST;
+        }
+        return sequence;
+      }
+    });
   }
 
   private static List<String> makeTokenList(String sentence) {

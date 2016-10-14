@@ -41,7 +41,7 @@ public class TokenGeneralizedSuffixTree<T> {
   private static final boolean isDebugEnabled = logger.isDebugEnabled();
   private ArrayList<List<T>> tokenLists;
   private TokenRadixTreeImpl<T, SuffixData> suffixTree;
-  private EosStrategy<T> eosStrategy;
+  private TokenStrategy<T> tokenStrategy;
 
   private List<Set<Tree<TokenRadixData<T, SuffixData>>>> _leavesByString;
 
@@ -58,24 +58,35 @@ public class TokenGeneralizedSuffixTree<T> {
     }
   };
 
-  public TokenGeneralizedSuffixTree(List<List<T>> tokenLists, EosStrategy<T> eosStrategy) {
+  public TokenGeneralizedSuffixTree(List<List<T>> tokenLists, TokenStrategy<T> tokenStrategy) {
     this.tokenLists = new ArrayList<List<T>>(tokenLists);
-    this.eosStrategy = eosStrategy;
+    this.tokenStrategy = tokenStrategy;
     this.suffixTree = new TokenRadixTreeImpl<T, SuffixData>();
 
     for (int i = 0; i < tokenLists.size(); ++i) {
       final List<T> tokenList = tokenLists.get(i);
       final int len = tokenList.size();
 
+      SuffixesLoop:
       for (int j = 0; j < len; ++j) {
         List<T> suffix;
 
         if (j == 0) {
           suffix = new LinkedList<T>(tokenList);
-          suffix.add(eosStrategy.createEos(i));
+
+          if (!tokenStrategy.isValidSuffix(suffix)) {
+            continue SuffixesLoop;
+          }
+
+          suffix.add(tokenStrategy.createEos(i));
         } else {
           suffix = new LinkedList<T>(tokenList.subList(j, len));
-          suffix.add(eosStrategy.createEos(-1));
+
+          if (!tokenStrategy.isValidSuffix(suffix)) {
+            continue SuffixesLoop;
+          }
+
+          suffix.add(tokenStrategy.createEos(-1));
         }
 
         suffixTree.insert(suffix, new SuffixData(i, j), VALUE_MERGER, VALUE_REPLICATOR);
@@ -114,7 +125,7 @@ public class TokenGeneralizedSuffixTree<T> {
     final int lastIndex = len - 1;
     final T lastToken = tokens.get(lastIndex);
 
-    if (eosStrategy.isEos(lastToken)) {
+    if (tokenStrategy.isEos(lastToken)) {
       return tokens.subList(startPos, lastIndex);
     }
 
@@ -236,9 +247,10 @@ public class TokenGeneralizedSuffixTree<T> {
     }
 
     public Map<List<T>, BitSet> findCommonSequences(int minLength, int minParticipants) {
-      final Map<Integer, Map<List<T>, PathElement>> seqLengthToCommonSequences =
+      final Map<Integer, Map<List<T>, KeyAndParticipants>> seqLengthToCommonSequences =
         new HashMap<>();
 
+      PathElementLoop:
       for (PathElement pathElement : node2pathElt.values()) {
         if (isDebugEnabled) {
           logger.debug("Found path element " + pathElement);
@@ -249,25 +261,38 @@ public class TokenGeneralizedSuffixTree<T> {
             logger.debug("Skipping path with num participating = " +
              pathElement.getNumParticipating() + " < " + minParticipants);
           }
-          continue;
+          continue PathElementLoop;
         }
 
         final List<T> tokens = pathElement.getKey();
-        final int keyLength = tokens.size();
+
+        if (isDebugEnabled) {
+          logger.debug("Tokens = " + tokens);
+        }
+
+        final List<T> longestValid = tokenStrategy.longestValidSubsequence(tokens);
+
+        if (isDebugEnabled) {
+          logger.debug("Longest valid subsequence = " + longestValid);
+        }
+
+        final int keyLength = longestValid.size();
         if (keyLength < minLength) {
           if (isDebugEnabled) {
-            logger.debug("Skipping key " + tokens + " with length " + keyLength +" < " + minLength);
+            logger.debug("Skipping key " + longestValid + " with length " + keyLength +" < " + minLength);
           }
-          continue;
+          continue PathElementLoop;
         }
 
-        Map<List<T>, PathElement> commonSequences = seqLengthToCommonSequences.get(keyLength);
+        Map<List<T>, KeyAndParticipants> commonSequences =
+          seqLengthToCommonSequences.get(keyLength);
 
         if (commonSequences == null) {
-          commonSequences = new HashMap<List<T>, PathElement>();
+          commonSequences = new HashMap<List<T>, KeyAndParticipants>();
           seqLengthToCommonSequences.put(keyLength, commonSequences);
         }
-        commonSequences.put(tokens, pathElement);
+        commonSequences.put(longestValid, new KeyAndParticipants(
+           pathElement.getKey(), pathElement.getParticipants()));
       }
 
       // Remove proper prefixes
@@ -286,10 +311,10 @@ public class TokenGeneralizedSuffixTree<T> {
       for (int i = 0; i < keyLengthArray.length - 1; i++) {
         final int keyLength = keyLengthArray[i];
 
-        Iterator<Map.Entry<List<T>, PathElement>> it = seqLengthToCommonSequences.get(keyLength).entrySet().iterator();
+        Iterator<Map.Entry<List<T>, KeyAndParticipants>> it = seqLengthToCommonSequences.get(keyLength).entrySet().iterator();
 
         while (it.hasNext()) {
-          final Map.Entry<List<T>, PathElement> entry = it.next();
+          final Map.Entry<List<T>, KeyAndParticipants> entry = it.next();
           final List<T> tokens = entry.getKey();
           final BitSet participants = entry.getValue().participants;
 
@@ -299,7 +324,7 @@ public class TokenGeneralizedSuffixTree<T> {
              " with participants " + participants + " and length " + nextKeyLength);
           }
 
-          final Map<List<T>, PathElement> largerSubsequences =
+          final Map<List<T>, KeyAndParticipants> largerSubsequences =
             seqLengthToCommonSequences.get(nextKeyLength);
 
           if (largerSubsequences == null) {
@@ -312,10 +337,10 @@ public class TokenGeneralizedSuffixTree<T> {
             }
 
             LargerSubsequencesLoop:
-            for (Map.Entry<List<T>, PathElement> largerEntry : largerSubsequences.entrySet()) {
+            for (Map.Entry<List<T>, KeyAndParticipants> largerEntry : largerSubsequences.entrySet()) {
               final List<T> largerSubsequence = largerEntry.getKey();
-              final PathElement largerPathElement = largerEntry.getValue();
-              if (participants.equals(largerPathElement.participants)) {
+              final KeyAndParticipants largerKeyAndParticipants = largerEntry.getValue();
+              if (participants.equals(largerKeyAndParticipants.participants)) {
                 if (isDebugEnabled) {
                   logger.debug("participants of "  + tokens + " are the same as " + largerSubsequence);
                 }
@@ -342,8 +367,8 @@ public class TokenGeneralizedSuffixTree<T> {
 
       final Map<List<T>, BitSet> rv = new HashMap<>();
 
-      for (Map<List<T>, PathElement> seqToPathElement : seqLengthToCommonSequences.values()) {
-        for (Map.Entry<List<T>, PathElement> entry : seqToPathElement.entrySet()) {
+      for (Map<List<T>, KeyAndParticipants> seqToPathElement : seqLengthToCommonSequences.values()) {
+        for (Map.Entry<List<T>, KeyAndParticipants> entry : seqToPathElement.entrySet()) {
           rv.put(entry.getKey(), entry.getValue().getParticipants());
         }
       }
@@ -552,13 +577,42 @@ public class TokenGeneralizedSuffixTree<T> {
     }
   }
 
-  private final class PathElement {
+  private class KeyAndParticipants {
+    KeyAndParticipants() { }
+
+    KeyAndParticipants(final List<T> key, final BitSet participants) {
+      this.key = key;
+      this.participants = participants;
+    }
+
+    /**
+     * Get this element's key (available after finalized).
+     */
+    public List<T> getKey() {
+      return key;
+    }
+
+    public BitSet getParticipants() {
+      return participants;
+    }
+
+    public int getNumParticipating() {
+      return participants.cardinality();
+    }
+
+    public String toString() {
+      return key.toString();
+    }
+
+    protected BitSet participants;
+    protected List<T> key;
+  }
+
+  private final class PathElement extends KeyAndParticipants {
 
     private Tree<TokenRadixData<T, SuffixData>> node;
     private int depth;
-    private BitSet participants;
     private boolean finalized;
-    private List<T> key;
     private int contribLen;
 
     PathElement(Tree<TokenRadixData<T, SuffixData>> node, PathElement childElt) {
@@ -615,30 +669,12 @@ public class TokenGeneralizedSuffixTree<T> {
     }
 
     /**
-     * Get this element's key (available after finalized).
-     */
-    public List<T> getKey() {
-      return key;
-    }
-
-    /**
      * Get the length of this element's contribution to the key (available after finalized).
      */
     public int getContribLen() {
       return contribLen;
     }
 
-    public BitSet getParticipants() {
-      return participants;
-    }
-
-    public int getNumParticipating() {
-      return participants.cardinality();
-    }
-
-    public String toString() {
-      return key.toString();
-    }
   }
 
   private final class PathElementSet {
